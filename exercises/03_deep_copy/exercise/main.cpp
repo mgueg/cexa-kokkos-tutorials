@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
         // Create a 3D view of size Nx x Ny x Nz
 
         std::cout << " 1) Creating the 3D view `matrix` of size " << Nx << " x " << Ny << " x " << Nz << std::endl;
-
+        ///!!! a view live 1st on device part
         Kokkos::View<double***> matrix("matrix", Nx, Ny, Nz);
 
         // Get the rank
@@ -66,32 +66,51 @@ int main(int argc, char* argv[]) {
 
         // _____________________________________________________
         // Create a mirror view of the matrix using create_mirror_view
-
-        // ...
-
+	auto host_matrix = Kokkos::create_mirror_view(matrix);
+	
+        std::cout << " 2) Creating the Mirror 3D view with Kokkos::create_mirror_view " << host_matrix.rank() << std::endl;
 #ifdef __unix__
         getrusage(RUSAGE_SELF, &usage);
         std::cout << "Total memory usage after `create_mirror_view`: " << usage.ru_maxrss << " KB" << std::endl;
 #endif
 
         // Initialize the matrix
-
-        // ...
+       std::cout << "Init host matrix " << std::endl;
+       for (int i = 0; i < Nx; i++) {
+            for (int j = 0; j < Ny; j++) {
+                for (int k = 0; k < Nz; k++) {
+                    host_matrix(i, j, k) = i + j + k;
+                }
+            }
+        }
+ 
 
         // _____________________________________________________
         // Deep copy the mirror view to the matrix
+        timer_start = timer.seconds();
+	//!!! deep_copy(destination,source)
+	//!!! views must be similar (same shape, layout...)
+	//!!! 
+        std::cout << "Copy to device view " << std::endl;
+	Kokkos::deep_copy(matrix,host_matrix);
+        timer_stop = timer.seconds();
 
-        // ...
-
+	std::cout << "Time to deep copy mirror to matrix: " << timer_stop - timer_start << std::endl;
         // _____________________________________________________
-        // New mirror view
-
-        // ...
+        // New mirror viewp
+        std::cout << "3) New mirror with create_mirror " << std::endl;
+	auto host_matrix2 = Kokkos::create_mirror(matrix);
+        
 
         // _____________________________________________________
         // Deep copy the matrix to the new mirror view
-
-        // ...
+	
+        timer_start = timer.seconds();
+	//!!! deep_copy(destination,source)
+	Kokkos::deep_copy(host_matrix2,matrix);
+        timer_stop = timer.seconds();
+        
+	std::cout << "Time to deep copy mirror to matrix: " << timer_stop - timer_start << std::endl;
 
 #ifdef __unix__
         getrusage(RUSAGE_SELF, &usage);
@@ -100,9 +119,15 @@ int main(int argc, char* argv[]) {
 
         // _____________________________________________________
         // Compare mirror and mirror_2
-
-        // ...
-
+       double error = 0.0;
+       for (int i = 0; i < Nx; i++) {
+            for (int j = 0; j < Ny; j++) {
+                for (int k = 0; k < Nz; k++) {
+                   error  +=  std::abs(host_matrix(i, j, k)-host_matrix2(i, j, k));
+                }
+            }
+        }
+	std::cout << " Error between mirrors ?? "  << error << std::endl;
 
     }
     Kokkos::finalize();
