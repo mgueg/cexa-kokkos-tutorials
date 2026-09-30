@@ -34,6 +34,7 @@ void compute(const int sizeX, const int sizeY, const int sizeZ,
     Kokkos::View<double ***> field("field", sizeX, sizeY, sizeZ);
     Kokkos::View<double ***> fieldTemp("field temp", sizeX, sizeY, sizeZ);
 
+    Kokkos::Profiling::pushRegion("init");
     // initialize hot
     Kokkos::parallel_for(
         Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {1, sizeY, sizeZ}),
@@ -51,7 +52,7 @@ void compute(const int sizeX, const int sizeY, const int sizeZ,
 
     // wait for all initializations to complete
     Kokkos::fence();
-
+    Kokkos::Profiling::popRegion();
     /**
      * End initialization
      */
@@ -60,6 +61,7 @@ void compute(const int sizeX, const int sizeY, const int sizeZ,
      * Start computation
      */
 
+    Kokkos::Profiling::pushRegion("Compute");
     // iteration loop
     std::size_t iteration;
     double residual = 10;
@@ -107,6 +109,7 @@ void compute(const int sizeX, const int sizeY, const int sizeZ,
         Kokkos::fence();
     }
 
+    Kokkos::Profiling::popRegion();
     /**
      * End computation
      */
